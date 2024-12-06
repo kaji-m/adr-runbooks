@@ -27,74 +27,189 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Create Jekyll structure
+      - name: Create Jekyll Files
         run: |
-          mkdir -p _runbooks _layouts _includes
+          # Create directories
+          mkdir -p _runbooks _layouts _includes assets/css
+          
+          # Create _config.yml
+          cat > _config.yml << 'EOL'
+          title: Contrast Security ADR Runbooks
+          description: Security runbooks for Contrast Security's Attack Detection Rules
+          baseurl: "/adr-runbooks"
+          url: "https://contrast-security-oss.github.io"
+          repository: Contrast-Security-OSS/adr-runbooks
+          
+          theme: minima
+          markdown: kramdown
+          kramdown:
+            input: GFM
+            hard_wrap: true
+            syntax_highlighter: rouge
+            parse_block_html: true
+            auto_ids: true
+          
+          collections:
+            runbooks:
+              output: true
+              permalink: /runbooks/:title/
+          
+          defaults:
+            - scope:
+                path: ""
+                type: runbooks
+              values:
+                layout: runbook
+          
+          exclude:
+            - README.md
+            - Gemfile
+            - Gemfile.lock
+            - vendor
+            - .git/
+          EOL
           
           # Create layout file
-          echo '---' > _layouts/runbook.html
-          echo 'layout: default' >> _layouts/runbook.html
-          echo '---' >> _layouts/runbook.html
-          echo '<article class="runbook">' >> _layouts/runbook.html
-          echo '  <h1>{{ page.title }}</h1>' >> _layouts/runbook.html
-          echo '  {{ content }}' >> _layouts/runbook.html
-          echo '  <footer><a href="{{ site.github.repository_url }}/edit/main/{{ page.path }}">Edit this page</a></footer>' >> _layouts/runbook.html
-          echo '</article>' >> _layouts/runbook.html
+          cat > _layouts/runbook.html << 'EOL'
+          ---
+          layout: default
+          ---
+          <article class="runbook">
+            <header class="runbook-header">
+              <h1>{{ page.title }}</h1>
+            </header>
           
-          # Process runbooks
+            <div class="runbook-content markdown-body">
+              {{ content }}
+            </div>
+          
+            <footer class="runbook-footer">
+              <hr>
+              <p>
+                <a href="{{ site.github.repository_url }}/edit/main/{{ page.path }}">Edit this page on GitHub</a>
+              </p>
+            </footer>
+          </article>
+          
+          <style>
+          .runbook {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          
+          .runbook-content {
+            line-height: 1.6;
+          }
+          
+          .runbook-content pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f6f8fa;
+            padding: 16px;
+            border-radius: 3px;
+          }
+          
+          .runbook-content code {
+            font-family: monospace;
+            background-color: #f6f8fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+          }
+          
+          .runbook-content h2 {
+            margin-top: 2em;
+            margin-bottom: 1em;
+            padding-bottom: 0.3em;
+            border-bottom: 1px solid #eaecef;
+          }
+          
+          .runbook-content ul {
+            margin-bottom: 1em;
+          }
+          
+          .runbook-content li {
+            margin: 0.5em 0;
+          }
+          </style>
+          EOL
+          
+          # Create Gemfile
+          cat > Gemfile << 'EOL'
+          source "https://rubygems.org"
+          gem "jekyll", "~> 4.2.0"
+          gem "minima"
+          gem "webrick"
+          EOL
+
+      - name: Process Runbooks
+        run: |
           for file in runbooks/*.md; do
             if [ -f "$file" ] && [ "$(basename "$file")" != "README.md" ]; then
-              filename=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/runbook\.md$/md/' | sed 's/[)(]//g')
+              # Get clean title and filename
               title=$(basename "$file" .md | sed 's/RunBook//')
+              newname=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/runbook\.md$/md/' | sed 's/[)(]//g')
               
-              # Create new runbook file with front matter
-              echo "---" > "_runbooks/$filename"
-              echo "layout: runbook" >> "_runbooks/$filename"
-              echo "title: \"$title\"" >> "_runbooks/$filename"
-              echo "permalink: /runbooks/${filename%.*}/" >> "_runbooks/$filename"
-              echo "---" >> "_runbooks/$filename"
+              # Create temporary file
+              temp_file=$(mktemp)
               
-              # Append content, skipping any existing front matter
-              if grep -q "^---" "$file"; then
-                sed -e '1{/^---$/!q;};1,/^---$/d' "$file" >> "_runbooks/$filename"
-              else
-                cat "$file" >> "_runbooks/$filename"
-              fi
+              # Add front matter
+              echo "---" > "$temp_file"
+              echo "layout: runbook" >> "$temp_file"
+              echo "title: \"$title\"" >> "$temp_file"
+              echo "permalink: /runbooks/${newname%.*}/" >> "$temp_file"
+              echo "---" >> "$temp_file"
+              echo "" >> "$temp_file"
+              
+              # Process the content:
+              # 1. Remove HTML comments
+              # 2. Ensure proper line breaks
+              # 3. Convert backslash line breaks to two spaces
+              sed -e 's/<!--.*-->//g' \
+                  -e 's/\\\\/\n/g' \
+                  -e 's/\\$/  /g' \
+                  -e 's/^#/\n#/g' \
+                  "$file" | grep -v '^[[:space:]]*$' >> "$temp_file"
+              
+              # Move to final location
+              mv "$temp_file" "_runbooks/$newname"
             fi
           done
           
           # Create index page
-          echo "---" > index.md
-          echo "layout: default" >> index.md
-          echo "title: Contrast Security ADR Runbooks" >> index.md
-          echo "---" >> index.md
-          echo "" >> index.md
-          echo "# Attack Detection Rules (ADR) Runbooks" >> index.md
-          echo "" >> index.md
-          echo "Welcome to Contrast Security's Attack Detection Rules (ADR) Runbooks. These guides provide detailed procedures for understanding and responding to various security vulnerabilities detected by Contrast Security." >> index.md
-          echo "" >> index.md
-          echo "## Available Runbooks" >> index.md
-          echo "" >> index.md
-          echo "{% assign sorted_runbooks = site.runbooks | sort: 'title' %}" >> index.md
-          echo "{% for runbook in sorted_runbooks %}" >> index.md
-          echo "* [{{ runbook.title }}]({{ runbook.url | relative_url }})" >> index.md
-          echo "{% endfor %}" >> index.md
+          cat > index.md << 'EOL'
+          ---
+          layout: default
+          title: Contrast Security ADR Runbooks
+          ---
+          
+          # Attack Detection Rules (ADR) Runbooks
+          
+          Welcome to Contrast Security's Attack Detection Rules (ADR) Runbooks. These guides provide detailed procedures for understanding and responding to various security vulnerabilities detected by Contrast Security.
+          
+          ## Available Runbooks
+          
+          {% assign sorted_runbooks = site.runbooks | sort: "title" %}
+          {% for runbook in sorted_runbooks %}
+          * [{{ runbook.title }}]({{ runbook.url | relative_url }})
+          {% endfor %}
+          
+          ## Contributing
+          
+          These runbooks are open source. To contribute:
+          
+          1. Fork the [repository](https://github.com/Contrast-Security-OSS/adr-runbooks)
+          2. Make your changes
+          3. Submit a pull request
+          EOL
 
-      - name: Setup Dependencies
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Build Site
         run: |
-          echo "source 'https://rubygems.org'" > Gemfile
-          echo "gem 'jekyll', '~> 4.2.0'" >> Gemfile
-          echo "gem 'minima'" >> Gemfile
-          echo "gem 'webrick'" >> Gemfile
           bundle install
-
-      - name: Build with Jekyll
-        run: bundle exec jekyll build
-        env:
-          JEKYLL_ENV: production
+          bundle exec jekyll build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
