@@ -1,4 +1,4 @@
-name: Deploy Security Runbooks to GitHub Pages
+name: Deploy Jekyll with GitHub Pages dependencies preinstalled
 
 on:
   push:
@@ -21,227 +21,72 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
-
-      - name: Setup Dependencies
-        run: |
-          echo "source 'https://rubygems.org'" > Gemfile
-          echo "gem 'jekyll', '~> 4.2.0'" >> Gemfile
-          echo "gem 'minima'" >> Gemfile
-          echo "gem 'webrick'" >> Gemfile
-          bundle install
-
       - name: Create Jekyll structure
         run: |
-          mkdir -p _runbooks _layouts _includes assets/css
+          mkdir -p _runbooks
           
-          # Create _config.yml
+          # Create config file
           cat > _config.yml << 'EOL'
           title: Contrast Security ADR Runbooks
-          description: Security runbooks for Contrast Security's Attack Detection Rules
           baseurl: "/adr-runbooks"
           url: "https://contrast-security-oss.github.io"
-          repository: Contrast-Security-OSS/adr-runbooks
           
-          markdown: kramdown
-          kramdown:
-            input: GFM
-            hard_wrap: true
-            syntax_highlighter: rouge
-            parse_block_html: true
-            auto_ids: true
-          
-          theme: minima
+          markdown: GFM
           
           collections:
             runbooks:
               output: true
-              permalink: /runbooks/:title/
+              permalink: /runbooks/:name/
           
           defaults:
             - scope:
                 path: ""
                 type: runbooks
               values:
-                layout: runbook
+                layout: default
           EOL
-          
-          # Create runbook layout
-          cat > _layouts/runbook.html << 'EOL'
-          ---
-          layout: default
-          ---
-          <article class="runbook">
-            <header class="runbook-header">
-              <h1>{{ page.title }}</h1>
-            </header>
-            <div class="runbook-content">
-              {{ content }}
-            </div>
-          </article>
-          
-          <style>
-          .runbook {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          
-          .runbook-content {
-            line-height: 1.6;
-          }
-          
-          .runbook-content h1,
-          .runbook-content h2 {
-            margin-top: 1.5em;
-            margin-bottom: 0.5em;
-            padding-bottom: 0.3em;
-            border-bottom: 1px solid #eaecef;
-          }
-          
-          .runbook-content p {
-            margin-bottom: 1em;
-            white-space: pre-wrap;
-          }
-          
-          .runbook-content pre,
-          .runbook-content code {
-            background-color: #f6f8fa;
-            border-radius: 3px;
-            padding: 16px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-          }
-          
-          .runbook-content ul {
-            margin-bottom: 1em;
-            padding-left: 2em;
-          }
-          
-          .runbook-content li {
-            margin: 0.5em 0;
-          }
-          
-          .runbook-content blockquote {
-            margin: 1em 0;
-            padding: 0 1em;
-            color: #6a737d;
-            border-left: 0.25em solid #dfe2e5;
-          }
-          </style>
-          EOL
-
-      - name: Process Runbooks
-        run: |
-          process_runbook() {
-            local file="$1"
-            local newname=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/runbook\.md$/md/' | sed 's/[)(]//g')
-            local title=$(basename "$file" .md | sed 's/RunBook//')
-            local temp_file=$(mktemp)
-            
-            # Add front matter
-            echo "---" > "$temp_file"
-            echo "layout: runbook" >> "$temp_file"
-            echo "title: \"$title\"" >> "$temp_file"
-            echo "permalink: /runbooks/${newname%.*}/" >> "$temp_file"
-            echo "---" >> "$temp_file"
-            echo "" >> "$temp_file"
-            
-            # Process content while preserving formatting
-            awk '
-              # Skip HTML comments
-              /<!--/ { next }
-              
-              # Handle code blocks
-              /^`/ {
-                if (in_code == 0) {
-                  in_code = 1
-                  print ""
-                  print $0
-                  next
-                } else {
-                  in_code = 0
-                  print $0
-                  print ""
-                  next
-                }
-              }
-              
-              # Add newlines around headers
-              /^#/ {
-                if (NR > 1) print ""
-                print $0
-                print ""
-                next
-              }
-              
-              # Handle line breaks
-              /\\$/ {
-                sub(/\\$/, "  ")
-                print $0
-                next
-              }
-              
-              # Print other lines with proper spacing
-              {
-                if ($0 ~ /^[[:space:]]*$/) {
-                  if (!prev_empty) print ""
-                  prev_empty = 1
-                } else {
-                  print $0
-                  prev_empty = 0
-                }
-              }
-            ' "$file" >> "$temp_file"
-            
-            mv "$temp_file" "_runbooks/$newname"
-          }
           
           # Process each runbook
           for file in runbooks/*.md; do
             if [ -f "$file" ] && [ "$(basename "$file")" != "README.md" ]; then
-              process_runbook "$file"
+              filename=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/runbook\.md$/md/')
+              
+              # Start with YAML front matter
+              {
+                echo "---"
+                echo "layout: default"
+                echo "title: $(basename "$file" | sed 's/RunBook.md//')"
+                echo "---"
+                echo
+                
+                # Add extra newline before each heading
+                sed 's/^#/\n#/' "$file" | \
+                # Replace single backslash at end of line with two spaces
+                sed 's/\\$/  /' | \
+                # Add newline after code blocks
+                sed 's/`/`\n/g' | \
+                # Ensure blank line after bullet points
+                sed 's/^-/\n-/' | \
+                # Remove HTML comments
+                sed 's/<!--.*-->//g' | \
+                # Remove empty lines but preserve spacing
+                sed '/^[[:space:]]*$/d'
+                
+              } > "_runbooks/$filename"
             fi
           done
-          
-          # Create index page
-          cat > index.md << 'EOL'
-          ---
-          layout: default
-          title: Contrast Security ADR Runbooks
-          ---
-          
-          # Attack Detection Rules (ADR) Runbooks
-          
-          Welcome to Contrast Security's Attack Detection Rules (ADR) Runbooks. These guides provide detailed procedures for understanding and responding to various security vulnerabilities detected by Contrast Security.
-          
-          ## Available Runbooks
-          
-          {% assign sorted_runbooks = site.runbooks | sort: "title" %}
-          {% for runbook in sorted_runbooks %}
-          * [{{ runbook.title }}]({{ runbook.url | relative_url }})
-          {% endfor %}
-          
-          ## Contributing
-          
-          These runbooks are open source. To contribute:
-          
-          1. Fork the [repository](https://github.com/Contrast-Security-OSS/adr-runbooks)
-          2. Make your changes
-          3. Submit a pull request
-          EOL
 
-      - name: Build Site
-        run: bundle exec jekyll build
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./_site
 
   deploy:
     environment:
