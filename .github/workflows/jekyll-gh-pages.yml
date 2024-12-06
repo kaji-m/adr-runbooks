@@ -27,6 +27,11 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
+      - name: Setup Jekyll
+        run: |
+          gem install bundler
+          bundle install
+
       - name: Create Jekyll structure
         run: |
           # Create necessary directories
@@ -38,7 +43,7 @@ jobs:
           layout: default
           ---
           <article class="runbook">
-            <header class="page-header">
+            <header class="runbook-header">
               <h1>{{ page.title }}</h1>
             </header>
             
@@ -46,59 +51,36 @@ jobs:
               {{ content }}
             </div>
             
-            <footer class="page-footer">
+            <footer class="runbook-footer">
               <hr>
-              <p class="text-small">
+              <p>
                 <a href="{{ site.github.repository_url }}/edit/main/{{ page.path }}">Edit this page on GitHub</a>
               </p>
             </footer>
           </article>
           EOL
 
-          # Add custom styles
-          cat > assets/css/style.scss << 'EOL'
-          ---
-          ---
-          
-          @import "{{ site.theme }}";
-          
-          .runbook {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          
-          .runbook h1 {
-            border-bottom: 1px solid #eaecef;
-            padding-bottom: 0.3em;
-          }
-          
-          .runbook pre {
-            background-color: #f6f8fa;
-            border-radius: 3px;
-            padding: 16px;
-          }
-          EOL
-
           # Process runbook files
-          for file in *.md runbooks/*.md; do
+          for file in runbooks/*.md; do
             if [ -f "$file" ] && [ "$(basename "$file")" != "README.md" ]; then
-              # Convert filename to lowercase and clean it
+              # Get clean title and filename
+              title=$(basename "$file" .md | sed 's/RunBook//' | sed 's/-/ /g')
               newname=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/runbook\.md$/md/' | sed 's/[)(]//g')
               
-              # Add front matter if it doesn't exist
-              if ! grep -q "^---" "$file"; then
-                title=$(basename "$file" .md | sed 's/RunBook//' | sed 's/-/ /g' | sed 's/\b\(.\)/\u\1/g')
-                temp_file=$(mktemp)
-                echo "---" > "$temp_file"
-                echo "layout: runbook" >> "$temp_file"
-                echo "title: \"$title\"" >> "$temp_file"
-                echo "nav_order: 2" >> "$temp_file"
-                echo "---" >> "$temp_file"
-                cat "$file" >> "$temp_file"
-                mv "$temp_file" "_runbooks/$newname"
+              # Create new file with front matter
+              cat > "_runbooks/$newname" << EOL
+---
+layout: runbook
+title: "${title}"
+permalink: /runbooks/${newname%.*}/
+---
+EOL
+              
+              # Append original content, skipping any existing front matter
+              if grep -q "^---" "$file"; then
+                sed -e '1{/^---$/!q;};1,/^---$/d' "$file" >> "_runbooks/$newname"
               else
-                cp "$file" "_runbooks/$newname"
+                cat "$file" >> "_runbooks/$newname"
               fi
             fi
           done
@@ -108,7 +90,6 @@ jobs:
           ---
           layout: default
           title: Contrast Security Attack Detection Rules Runbooks
-          nav_order: 1
           ---
 
           # Attack Detection Rules (ADR) Runbooks
@@ -135,13 +116,12 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./
-          destination: ./_site
+        run: bundle exec jekyll build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
 
   deploy:
     environment:
