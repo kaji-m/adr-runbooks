@@ -5,19 +5,19 @@ This repository contains detailed runbooks for responding to various security in
 ## Available Runbooks
 
 ### Injection Attacks
-- [Command Injection](runbooks/Command%20Injection%20RunBook.md) - Handling command injection attacks attempting to execute arbitrary system commands
-- [JNDI Injection](runbooks/JNDI%20Injection%20RunBook.md) - Responding to JNDI injection attempts targeting Java applications
-- [SQL Injection](runbooks/SQL%20Injection%20RunBook.md) - Managing SQL injection attacks against database systems
-- [Expression Language Injection](runbooks/Expression%20Language%20Injection%20RunBook.md) - Addressing expression language injection vulnerabilities
+- [Command Injection](runbooks/Command%20Injection%20RunBook) - Handling command injection attacks attempting to execute arbitrary system commands
+- [JNDI Injection](runbooks/JNDI%20Injection%20RunBook) - Responding to JNDI injection attempts targeting Java applications
+- [SQL Injection](runbooks/SQL%20Injection%20RunBook) - Managing SQL injection attacks against database systems
+- [Expression Language Injection](runbooks/Expression%20Language%20Injection%20RunBook) - Addressing expression language injection vulnerabilities
 
 ### Access Control & Traversal
-- [Path Traversal](runbooks/Path%20Traversal%20RunBook.md) - Handling attempts to access files outside intended directories
-- [HTTP Method Tampering](runbooks/HTTP%20Method%20Tampering%20RunBook.md) - Managing unauthorized HTTP method manipulation
+- [Path Traversal](runbooks/Path%20Traversal%20RunBook) - Handling attempts to access files outside intended directories
+- [HTTP Method Tampering](runbooks/HTTP%20Method%20Tampering%20RunBook) - Managing unauthorized HTTP method manipulation
 
 ### Data & Parsing Vulnerabilities  
-- [Cross-Site Scripting (XSS)](runbooks/Cross-Site%20Scripting%20(XSS)%20RunBook.md) - Responding to XSS attacks injecting malicious scripts
-- [XML External Entity Injection](runbooks/XML%20External%20Entity%20Injection%20RunBook.md) - Handling XXE attacks against XML parsers
-- [Untrusted Deserialization](runbooks/Untrusted%20Deserialization%20RunBook.md) - Managing deserialization of untrusted data
+- [Cross-Site Scripting (XSS)](runbooks/Cross-Site%20Scripting%20(XSS)%20RunBook) - Responding to XSS attacks injecting malicious scripts
+- [XML External Entity Injection](runbooks/XML%20External%20Entity%20Injection%20RunBook) - Handling XXE attacks against XML parsers
+- [Untrusted Deserialization](runbooks/Untrusted%20Deserialization%20RunBook) - Managing deserialization of untrusted data
 
 ## Runbook Structure
 
