@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: index
 title: Application Detection and Response Runbooks
 description: Security incident response runbooks for Contrast Security's Application Detection and Response
 ---
