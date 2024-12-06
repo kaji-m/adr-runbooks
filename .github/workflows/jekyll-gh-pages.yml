@@ -27,9 +27,16 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: Create Jekyll Files
+      - name: Setup Dependencies
         run: |
-          # Create directories
+          echo "source 'https://rubygems.org'" > Gemfile
+          echo "gem 'jekyll', '~> 4.2.0'" >> Gemfile
+          echo "gem 'minima'" >> Gemfile
+          echo "gem 'webrick'" >> Gemfile
+          bundle install
+
+      - name: Create Jekyll structure
+        run: |
           mkdir -p _runbooks _layouts _includes assets/css
           
           # Create _config.yml
@@ -40,7 +47,6 @@ jobs:
           url: "https://contrast-security-oss.github.io"
           repository: Contrast-Security-OSS/adr-runbooks
           
-          theme: minima
           markdown: kramdown
           kramdown:
             input: GFM
@@ -48,6 +54,8 @@ jobs:
             syntax_highlighter: rouge
             parse_block_html: true
             auto_ids: true
+          
+          theme: minima
           
           collections:
             runbooks:
@@ -60,16 +68,9 @@ jobs:
                 type: runbooks
               values:
                 layout: runbook
-          
-          exclude:
-            - README.md
-            - Gemfile
-            - Gemfile.lock
-            - vendor
-            - .git/
           EOL
           
-          # Create layout file
+          # Create runbook layout
           cat > _layouts/runbook.html << 'EOL'
           ---
           layout: default
@@ -78,17 +79,9 @@ jobs:
             <header class="runbook-header">
               <h1>{{ page.title }}</h1>
             </header>
-          
-            <div class="runbook-content markdown-body">
+            <div class="runbook-content">
               {{ content }}
             </div>
-          
-            <footer class="runbook-footer">
-              <hr>
-              <p>
-                <a href="{{ site.github.repository_url }}/edit/main/{{ page.path }}">Edit this page on GitHub</a>
-              </p>
-            </footer>
           </article>
           
           <style>
@@ -102,77 +95,116 @@ jobs:
             line-height: 1.6;
           }
           
-          .runbook-content pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            background-color: #f6f8fa;
-            padding: 16px;
-            border-radius: 3px;
-          }
-          
-          .runbook-content code {
-            font-family: monospace;
-            background-color: #f6f8fa;
-            padding: 2px 4px;
-            border-radius: 3px;
-          }
-          
+          .runbook-content h1,
           .runbook-content h2 {
-            margin-top: 2em;
-            margin-bottom: 1em;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
             padding-bottom: 0.3em;
             border-bottom: 1px solid #eaecef;
           }
           
+          .runbook-content p {
+            margin-bottom: 1em;
+            white-space: pre-wrap;
+          }
+          
+          .runbook-content pre,
+          .runbook-content code {
+            background-color: #f6f8fa;
+            border-radius: 3px;
+            padding: 16px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+          }
+          
           .runbook-content ul {
             margin-bottom: 1em;
+            padding-left: 2em;
           }
           
           .runbook-content li {
             margin: 0.5em 0;
           }
-          </style>
-          EOL
           
-          # Create Gemfile
-          cat > Gemfile << 'EOL'
-          source "https://rubygems.org"
-          gem "jekyll", "~> 4.2.0"
-          gem "minima"
-          gem "webrick"
+          .runbook-content blockquote {
+            margin: 1em 0;
+            padding: 0 1em;
+            color: #6a737d;
+            border-left: 0.25em solid #dfe2e5;
+          }
+          </style>
           EOL
 
       - name: Process Runbooks
         run: |
+          process_runbook() {
+            local file="$1"
+            local newname=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/runbook\.md$/md/' | sed 's/[)(]//g')
+            local title=$(basename "$file" .md | sed 's/RunBook//')
+            local temp_file=$(mktemp)
+            
+            # Add front matter
+            echo "---" > "$temp_file"
+            echo "layout: runbook" >> "$temp_file"
+            echo "title: \"$title\"" >> "$temp_file"
+            echo "permalink: /runbooks/${newname%.*}/" >> "$temp_file"
+            echo "---" >> "$temp_file"
+            echo "" >> "$temp_file"
+            
+            # Process content while preserving formatting
+            awk '
+              # Skip HTML comments
+              /<!--/ { next }
+              
+              # Handle code blocks
+              /^`/ {
+                if (in_code == 0) {
+                  in_code = 1
+                  print ""
+                  print $0
+                  next
+                } else {
+                  in_code = 0
+                  print $0
+                  print ""
+                  next
+                }
+              }
+              
+              # Add newlines around headers
+              /^#/ {
+                if (NR > 1) print ""
+                print $0
+                print ""
+                next
+              }
+              
+              # Handle line breaks
+              /\\$/ {
+                sub(/\\$/, "  ")
+                print $0
+                next
+              }
+              
+              # Print other lines with proper spacing
+              {
+                if ($0 ~ /^[[:space:]]*$/) {
+                  if (!prev_empty) print ""
+                  prev_empty = 1
+                } else {
+                  print $0
+                  prev_empty = 0
+                }
+              }
+            ' "$file" >> "$temp_file"
+            
+            mv "$temp_file" "_runbooks/$newname"
+          }
+          
+          # Process each runbook
           for file in runbooks/*.md; do
             if [ -f "$file" ] && [ "$(basename "$file")" != "README.md" ]; then
-              # Get clean title and filename
-              title=$(basename "$file" .md | sed 's/RunBook//')
-              newname=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/runbook\.md$/md/' | sed 's/[)(]//g')
-              
-              # Create temporary file
-              temp_file=$(mktemp)
-              
-              # Add front matter
-              echo "---" > "$temp_file"
-              echo "layout: runbook" >> "$temp_file"
-              echo "title: \"$title\"" >> "$temp_file"
-              echo "permalink: /runbooks/${newname%.*}/" >> "$temp_file"
-              echo "---" >> "$temp_file"
-              echo "" >> "$temp_file"
-              
-              # Process the content:
-              # 1. Remove HTML comments
-              # 2. Ensure proper line breaks
-              # 3. Convert backslash line breaks to two spaces
-              sed -e 's/<!--.*-->//g' \
-                  -e 's/\\\\/\n/g' \
-                  -e 's/\\$/  /g' \
-                  -e 's/^#/\n#/g' \
-                  "$file" | grep -v '^[[:space:]]*$' >> "$temp_file"
-              
-              # Move to final location
-              mv "$temp_file" "_runbooks/$newname"
+              process_runbook "$file"
             fi
           done
           
@@ -203,13 +235,8 @@ jobs:
           3. Submit a pull request
           EOL
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
       - name: Build Site
-        run: |
-          bundle install
-          bundle exec jekyll build
+        run: bundle exec jekyll build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
