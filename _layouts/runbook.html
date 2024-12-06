@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }} | {{ site.title }}</title>
+    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+    <link rel="stylesheet" href="{{ '/assets/css/runbook.css' | relative_url }}">
+</head>
+
+<body>
+    <div class="nav-wrapper">
+        <nav class="nav">
+            <div class="nav-brand">
+                <img src="{{ '/assets/images/contrast-logo.svg' | relative_url }}" alt="Contrast Security"
+                    class="nav-logo">
+            </div>
+            <div class="nav-links">
+                {% for link in site.nav_links %}
+                <a href="{{ link.url | relative_url }}" {% if page.url==link.url %}class="active" {% endif %}>{{
+                    link.title }}</a>
+                {% endfor %}
+            </div>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="runbook-toc">
+                <h3>Table of Contents</h3>
+                {% include toc.html html=content h_min=2 h_max=3 class="toc-list" %}
+            </div>
+            <div class="quick-links">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="#post-incident-activities">Post-Incident Activities</a></li>
+                    <li><a href="#true-positive">True Positive Handling</a></li>
+                    <li><a href="#false-positive">False Positive Handling</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <main class="content runbook-content">
+            <header class="runbook-header">
+                <h1>{{ page.title }}</h1>
+                {% if page.description %}
+                <p class="runbook-description">{{ page.description }}</p>
+                {% endif %}
+            </header>
+
+            <article class="runbook-body">
+                {{ content }}
+            </article>
+
+            <footer class="runbook-footer">
+                <div class="runbook-meta">
+                    <p>Last updated: {{ page.last_modified_at | default: page.date | date: "%B %d, %Y" }}</p>
+                    <p><a href="{{ site.github.repository_url }}/edit/main/{{ page.path }}">Edit this page</a></p>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; {{ site.time | date: '%Y' }} Contrast Security. All rights reserved.</p>
+            <p>For more information, visit <a href="https://www.contrastsecurity.com">contrastsecurity.com</a></p>
+        </div>
+    </footer>
+
+    <script src="{{ '/assets/js/anchor-headings.js' | relative_url }}"></script>
+</body>
+
+</html>

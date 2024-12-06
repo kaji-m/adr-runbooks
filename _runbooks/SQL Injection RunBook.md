@@ -1,23 +1,24 @@
+---
+layout: runbook
+title: "SQL Injection"
+description: "Guide for addressing SQL injection attacks where malicious actors exploit vulnerabilities to inject unauthorized SQL commands into the database"
+---
+
 <!-- \ or two whitespaces used for line breaks -->
-# Command Injection Runbook
+# SQL Injection Runbook
 
-Command injection is a malicious technique where attackers exploit vulnerabilities in web applications to inject and execute arbitrary operating system (OS) commands on the server. By manipulating input data, attackers can manipulate the application's execution flow, tricking it into running unintended system commands.This can result in data breaches, system compromise, etc. Contrast uses various detection capabilities for Command Injection. Some track malicious input into commands being run, some detect sensitive file paths being accessed, and so forth. 
+SQL injection is a malicious technique where attackers exploit vulnerabilities in web applications to inject unauthorized SQL commands into the database. By carefully crafting input data, attackers can manipulate the SQL queries executed by the application, potentially leading to unauthorized data access, data modification, or even complete database compromise.
 
 
-Example Event - Exploited outcome Command Injection  
-`Oct 25 11:02:31 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The parameter cmd had a value that successfully exploited cmd-injection - whoami|WARN|pri=cmd-injection src=0:0:0:0:0:0:0:1 spt=8080 request=/cmd requestMethod=GET app=webapplication outcome=EXPLOITED`  
-  
-  
-
-Example Event - Blocked outcome Command Injection  
-`Oct 25 11:02:31 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The parameter cmd had a value that successfully exploited cmd-injection - whoami|WARN|pri=cmd-injection src=0:0:0:0:0:0:0:1 spt=8080 request=/cmd requestMethod=GET app=webapplication outcome=BLOCKED`
-  
+Example Event - Exploited outcome SQL Injection  
+`Jul 18 2024 13:14:35.717-0400 192.168.0.158 CEF:0|Contrast Security|Contrast Agent Java|6.5.4|SECURITY|The parameter lastName had a value that successfully exploited sql-injection - doe' or 1=1 AND|WARN|pri=sql-injection src=0:0:0:0:0:0:0:1 spt=8080 request=/customers requestMethod=GET app=Web Application outcome=EXPLOITED`  
   
 
-
-
-\
-Is the event a "cmd-injection-process-hardening" event?   [Yes](#handling-process-hardening)
+Example Event - Probed (or Ineffective) outcome SQL Injection  
+`Jul 18 2024 13:14:35.740-0400 192.168.0.158 CEF:0|Contrast Security|Contrast Agent Java|6.5.4|SECURITY|The parameter lastName had a value that matched a signature for, but did not successfully exploit, sql-injection - doe' or 1=1 AND|WARN|pri=sql-injection src=0:0:0:0:0:0:0:1 spt=8080 request=/error requestMethod=GET app=Web Application outcome=INEFFECTIVE` 
+  
+  
+  
 
 
 \
@@ -32,27 +33,28 @@ What is the “outcome” of the event you are triaging? (click to proceed)
 
 ## Exploited
 
-"Exploited" means Contrast detected an input coming into an application that looked like command injection and then confirmed the input performed a command injection during a call to the operating system by observing the execution of the injected command and its effects on the system.  
+An "Exploited" outcome means Contrast detected an input coming into an application that looked like SQL injection, and then confirmed the input was used in a SQL query that modified the meaning of that query.  
 
 To verify this is a true positive, review the following attributes of the event for common indicators:  
 
-- Does a system command get run in the application as part of normal usage?
-- Are there command chaining operators present? (&& || ; & |)
-- Are there command substitution characters present? ($(), ``)
-- Do the commands seem to be accessing suspicious files? (/etc/password/)
+- Are there SQL Keywords (JOIN, UNION, DROP, SELECT, AND, OR, SLEEP, etc) that change the logic of the query?
+- Are there SQL tautologies (1=1, ‘test’=’test’, and so on) that may change the boolean logic of an AND or OR statement?
 - Is the IP address from a pentester or known vulnerability scanner IP?
-- Are there unusual os/system related messages around the same timestamp as the event?
-- Are there application logs with OS error messages around the same timestamp as the event?
+- Are there SQL comments that comment-out parts of the query?
+- Are there unusual query execution times or error messages related to SQL around the same timestamp as the event?
+- Are there application logs with SQL error messages around the same timestamp as the event?
 
 
 
 \
 Examples:
 
-- `original_cmd_by_server $(cat /etc/passwd)`
-- `original_cmd_by_server; command2`
-- `original_cmd_by_server && command2`
-- `original_cmd_by_server || command2`  
+- `DROP sampletable;--`
+- `' or 1=1--`
+- `' UNION SELECT 1, 'anotheruser', 'doesnt matter', 1–`
+- `?id=1 AND (SELECT * FROM (SELECT NAME_CONST(database(),1),NAME_CONST(database(),1)) as x)--`
+- `select load_file('\\error\abc');`
+- `?id=1 OR IF(MID(@@version,1,1)='5',sleep(1),1)='2'`  
 
 \
 Does the event appear to be a true positive? (click to proceed)  
@@ -64,26 +66,27 @@ Does the event appear to be a true positive? (click to proceed)
 
 ## Blocked
 
-"Blocked" means Contrast detected an input coming into an application that looked like command injection and then confirmed the input performed a command injection during a call to the operating system and therefore blocked the execution of it.  
+"Blocked" means Contrast detected an input coming into an application that looked like SQL injection and then confirmed the input was used in a SQL query and modified the meaning of that query, and therefore blocked the application from performing the query.  
 
 To verify this is a true positive, review the following attributes of the event:
 
-- Does a system command get run in the application as part of normal usage?
-- Are there command chaining operators present? (&& || ; & |)
-- Are there command substitution characters present? ($(), ``)
-- Do the commands seem to be accessing suspicious files? (/etc/password/)
+- Are there SQL Keywords (JOIN, UNION, DROP, SELECT, AND, OR, SLEEP, etc) that change the logic of the query?
+- Are there SQL tautologies (1=1, ‘test’=’test’, and so on) that may change the boolean logic of an AND or OR statement?
 - Is the IP address from a pentester or known vulnerability scanner IP?
-- Are there unusual os/system related messages around the same timestamp as the event?
-- Are there application logs with OS error messages around the same timestamp as the event?
+- Are there SQL comments that comment-out parts of the query?
+- Are there unusual query execution times or error messages related to SQL around the same timestamp as the event?
+- Are there application logs with SQL error messages around the same timestamp as the event?
 
 
 \
 Examples:
 
-- `original_cmd_by_server $(cat /etc/passwd)`
-- `original_cmd_by_server; command2`
-- `original_cmd_by_server && command2`
-- `original_cmd_by_server || command2`  
+- `DROP sampletable;--`
+- `' or 1=1--`
+- `' UNION SELECT 1, 'anotheruser', 'doesnt matter', 1–`
+- `?id=1 AND (SELECT * FROM (SELECT NAME_CONST(database(),1),NAME_CONST(database(),1)) as x)--`
+- `select load_file('\\error\abc');`
+- `?id=1 OR IF(MID(@@version,1,1)='5',sleep(1),1)='2'`  
 
 
 \
@@ -99,7 +102,7 @@ Is the event a true positive? (click to proceed)
 
 ## Ineffective
 
-"Ineffective" means Contrast detected an input coming into an application that looked like command injection, but did not confirm the input performed a command injection during execution. This is called a “Probe” within the Contrast UI. This event is an unsuccessful attempt at an exploit. They can indicate an attack fuzzing and looking for vulnerabilities.
+"Ineffective" means Contrast detected an input coming into an application that looked like SQL injection, but did not confirm that the input was used in a SQL query and modified the meaning of that query.. This is called a “Probe” within the Contrast UI. This event is a real attack attempt to exploit your application, but it was ineffective. Probes can indicate an attacker scanning or exploring for vulnerabilities.
 
 - Does the probe event appear to be caused by legitimate traffic and numerous similar probe events are being generated, an [exclusion](https://docs.contrastsecurity.com/en/application-exclusions.html) can be configured to clean up Contrast data.  
 - Is the probe originating from a specific ip[s] that is a real external IP address (not internal load balancer or network device) and not the public IP address for a large company network?   Consider…  
@@ -269,20 +272,3 @@ To review, a Benign True Positive occurs when an application relies on vulnerabl
 - **Review and Improve**
   - **Review Response:** Conduct a post-mortem to review the response and identify improvement areas.
   - **Enhance Security Posture:** Implement additional security measures and improve monitoring.  
-## Handling Process Hardening  
-
-Process Hardening refers to a block that the agent applies to the application to be able to start external processes. Most web applications have no reason to launch external processes so this rule is intended to ensure that no attempts are made by an application to do so.
-
-When triaging this event type the key is in understanding if the web application starts external processes under normal conditions.
-
-Choose the Appropriate Action:  
-If the application should NOT start external processes:
-- Enable Block Mode: This will prevent the application from launching any external processes, ensuring maximum security.  
-
-\
-If the application DOES need to start external processes:
-
-- Monitor Mode (Recommended): Start with monitor mode to observe the commands the application executes. This helps identify legitimate use cases and potential risks without disrupting normal functionality.
-- Exclusions: If monitoring reveals legitimate needs, configure an exclusion to allow only specific, trusted external processes to run. Once all legitimate executions are accounted for, the rule can be placed into Block mode.
-- Disable the Rule (Use with Caution): If the application requires external process execution and other options are not feasible consider disabling the rule.
-

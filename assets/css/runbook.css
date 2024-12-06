@@ -1,0 +1,139 @@
+/* Runbook-specific styles */
+.runbook-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.runbook-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--deep-green);
+}
+
+.runbook-description {
+    font-size: 1.2rem;
+    color: var(--platinum-grey);
+    margin-top: 1rem;
+}
+
+/* Table of Contents */
+.runbook-toc {
+    position: sticky;
+    top: 2rem;
+    background: white;
+    padding: 1.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--platinum-grey);
+    margin-bottom: 2rem;
+}
+
+.toc-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.toc-list ul {
+    padding-left: 1.5rem;
+}
+
+.toc-list li {
+    margin: 0.5rem 0;
+}
+
+/* Outcome sections */
+.outcome-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    border-radius: 4px;
+    border-left: 4px solid var(--medium-green);
+    background: #f8f9fa;
+}
+
+.outcome-section h2 {
+    color: var(--deep-green);
+    margin-top: 0;
+}
+
+/* Example events */
+.event-example {
+    background: #f6f8fa;
+    padding: 1rem;
+    border-radius: 4px;
+    font-family: 'Consolas', monospace;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+/* Decision trees */
+.decision-tree {
+    margin: 2rem 0;
+    padding: 1rem;
+    border: 1px solid var(--platinum-grey);
+    border-radius: 4px;
+}
+
+.decision-option {
+    margin: 1rem 0;
+    padding-left: 2rem;
+    position: relative;
+}
+
+.decision-option::before {
+    content: "→";
+    position: absolute;
+    left: 0.5rem;
+    color: var(--medium-green);
+}
+
+/* Post-incident activities */
+.post-incident {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 4px;
+    margin: 2rem 0;
+}
+
+.post-incident h2 {
+    color: var(--midnight-blue);
+    border-bottom: 2px solid var(--medium-green);
+    padding-bottom: 0.5rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .container {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        position: static;
+        width: auto;
+        margin-bottom: 2rem;
+    }
+
+    .runbook-content {
+        padding: 1rem;
+    }
+}
+
+/* Print styles */
+@media print {
+
+    .nav-wrapper,
+    .sidebar,
+    .site-footer {
+        display: none;
+    }
+
+    .runbook-content {
+        box-shadow: none;
+        padding: 0;
+    }
+
+    .runbook-header {
+        border-bottom: none;
+    }
+}

@@ -1,18 +1,29 @@
+---
+layout: runbook
+title: "Command Injection"
+description: "Guide for detecting and responding to command injection attacks, where attackers exploit vulnerabilities to execute arbitrary operating system commands on the server"
+---
+
 <!-- \ or two whitespaces used for line breaks -->
-# XML External Entity Injection Runbook
+# Command Injection Runbook
 
-XXE is a flaw in XML parsers where attackers can cause the parser to read local or remote resources as part of the document. Attackers often abuse this functionality to access other sensitive system information.
+Command injection is a malicious technique where attackers exploit vulnerabilities in web applications to inject and execute arbitrary operating system (OS) commands on the server. By manipulating input data, attackers can manipulate the application's execution flow, tricking it into running unintended system commands.This can result in data breaches, system compromise, etc. Contrast uses various detection capabilities for Command Injection. Some track malicious input into commands being run, some detect sensitive file paths being accessed, and so forth. 
 
 
-Example Event - Exploited outcome XML External Entity Injection  
-`Oct 18 10:37:49 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The input XML Prolog had a value that successfully exploited xxe - <?xml version\=\1.0" encoding\="UTF-8"?> <!DOCTYPE foo [<!ENTITY example SYSTEM "/etc/passwd"> ]> <data>&example;</data> |WARN|pri=xxe src=0:0:0:0:0:0:0:1 spt=8080 request=/parse-xml requestMethod=POST app=web-application outcome=EXPLOITED`  
+Example Event - Exploited outcome Command Injection  
+`Oct 25 11:02:31 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The parameter cmd had a value that successfully exploited cmd-injection - whoami|WARN|pri=cmd-injection src=0:0:0:0:0:0:0:1 spt=8080 request=/cmd requestMethod=GET app=webapplication outcome=EXPLOITED`  
   
   
 
-Example Event - Blocked outcome XML External Entity Injection  
-`Oct 18 10:58:06 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The input XML Prolog had a value that successfully exploited xxe - <?xml version\="1.0" encoding\="UTF-8"?> <!DOCTYPE foo [<!ENTITY example SYSTEM "/etc/passwd"> ]> <data>&example;</data> |WARN|pri=xxe src=0:0:0:0:0:0:0:1 spt=8080 request=/parse-xml requestMethod=POST app=web-application outcome=BLOCKED`
+Example Event - Blocked outcome Command Injection  
+`Oct 25 11:02:31 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The parameter cmd had a value that successfully exploited cmd-injection - whoami|WARN|pri=cmd-injection src=0:0:0:0:0:0:0:1 spt=8080 request=/cmd requestMethod=GET app=webapplication outcome=BLOCKED`
   
   
+
+
+
+\
+Is the event a "cmd-injection-process-hardening" event?   [Yes](#handling-process-hardening)
 
 
 \
@@ -27,23 +38,27 @@ What is the “outcome” of the event you are triaging? (click to proceed)
 
 ## Exploited
 
-"Exploited" indicates that Contrast detected an incoming input resembling an XML string containing external entities and then confirmed the declared entities were resolved by the XML parser.  
+"Exploited" means Contrast detected an input coming into an application that looked like command injection and then confirmed the input performed a command injection during a call to the operating system by observing the execution of the injected command and its effects on the system.  
 
 To verify this is a true positive, review the following attributes of the event for common indicators:  
 
-- Are entity declaration keywords present in the payload? (<!ENTITY, SYSTEM, PUBLIC, etc)
-- Are there references to external entities in the payload? (&example;)
-- Are there references to local files in the payload? (file:///, /etc/passwd, etc)
-- Are there references to remote files in the payload? (http://, https://, etc)
-- Are there application logs with XML parsing error messages around the same timestamp as the event?
+- Does a system command get run in the application as part of normal usage?
+- Are there command chaining operators present? (&& || ; & |)
+- Are there command substitution characters present? ($(), ``)
+- Do the commands seem to be accessing suspicious files? (/etc/password/)
+- Is the IP address from a pentester or known vulnerability scanner IP?
+- Are there unusual os/system related messages around the same timestamp as the event?
+- Are there application logs with OS error messages around the same timestamp as the event?
 
 
 
 \
 Examples:
 
-- `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE foo [<!ENTITY example SYSTEM "/etc/passwd"> ]><data>&example;</data>`
-- `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE foo [<!ENTITY example SYSTEM "http://localhost"> ]><data>&example;</data>`  
+- `original_cmd_by_server $(cat /etc/passwd)`
+- `original_cmd_by_server; command2`
+- `original_cmd_by_server && command2`
+- `original_cmd_by_server || command2`  
 
 \
 Does the event appear to be a true positive? (click to proceed)  
@@ -55,22 +70,26 @@ Does the event appear to be a true positive? (click to proceed)
 
 ## Blocked
 
-"Blocked" indicates that Contrast detected an incoming input resembling an XML string containing external entities and then confirmed the declared entities were being resolved by the XML parser and therefore blocked the application from performing the operation.  
+"Blocked" means Contrast detected an input coming into an application that looked like command injection and then confirmed the input performed a command injection during a call to the operating system and therefore blocked the execution of it.  
 
 To verify this is a true positive, review the following attributes of the event:
 
-- Are entity declaration keywords present in the payload? (<!ENTITY, SYSTEM, PUBLIC, etc)
-- Are there references to external entities in the payload? (&example;)
-- Are there references to local files in the payload? (file:///, /etc/passwd, etc)
-- Are there references to remote files in the payload? (http://, https://, etc)
-- Are there application logs with XML parsing error messages around the same timestamp as the event?
+- Does a system command get run in the application as part of normal usage?
+- Are there command chaining operators present? (&& || ; & |)
+- Are there command substitution characters present? ($(), ``)
+- Do the commands seem to be accessing suspicious files? (/etc/password/)
+- Is the IP address from a pentester or known vulnerability scanner IP?
+- Are there unusual os/system related messages around the same timestamp as the event?
+- Are there application logs with OS error messages around the same timestamp as the event?
 
 
 \
 Examples:
 
-- `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE foo [<!ENTITY example SYSTEM "/etc/passwd"> ]><data>&example;</data>`
-- `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE foo [<!ENTITY example SYSTEM "http://localhost"> ]><data>&example;</data>`  
+- `original_cmd_by_server $(cat /etc/passwd)`
+- `original_cmd_by_server; command2`
+- `original_cmd_by_server && command2`
+- `original_cmd_by_server || command2`  
 
 
 \
@@ -86,7 +105,7 @@ Is the event a true positive? (click to proceed)
 
 ## Ineffective
 
-"Ineffective" means that Contrast detected an incoming input resembling an XML external entity injection, but it did not confirm that the entities were resolved. This is called a “Probe” within the Contrast UI. This event is a real attack attempt to exploit your application, but it was ineffective. Probes can indicate an attacker scanning or exploring for vulnerabilities.
+"Ineffective" means Contrast detected an input coming into an application that looked like command injection, but did not confirm the input performed a command injection during execution. This is called a “Probe” within the Contrast UI. This event is an unsuccessful attempt at an exploit. They can indicate an attack fuzzing and looking for vulnerabilities.
 
 - Does the probe event appear to be caused by legitimate traffic and numerous similar probe events are being generated, an [exclusion](https://docs.contrastsecurity.com/en/application-exclusions.html) can be configured to clean up Contrast data.  
 - Is the probe originating from a specific ip[s] that is a real external IP address (not internal load balancer or network device) and not the public IP address for a large company network?   Consider…  
@@ -256,3 +275,20 @@ To review, a Benign True Positive occurs when an application relies on vulnerabl
 - **Review and Improve**
   - **Review Response:** Conduct a post-mortem to review the response and identify improvement areas.
   - **Enhance Security Posture:** Implement additional security measures and improve monitoring.  
+## Handling Process Hardening  
+
+Process Hardening refers to a block that the agent applies to the application to be able to start external processes. Most web applications have no reason to launch external processes so this rule is intended to ensure that no attempts are made by an application to do so.
+
+When triaging this event type the key is in understanding if the web application starts external processes under normal conditions.
+
+Choose the Appropriate Action:  
+If the application should NOT start external processes:
+- Enable Block Mode: This will prevent the application from launching any external processes, ensuring maximum security.  
+
+\
+If the application DOES need to start external processes:
+
+- Monitor Mode (Recommended): Start with monitor mode to observe the commands the application executes. This helps identify legitimate use cases and potential risks without disrupting normal functionality.
+- Exclusions: If monitoring reveals legitimate needs, configure an exclusion to allow only specific, trusted external processes to run. Once all legitimate executions are accounted for, the rule can be placed into Block mode.
+- Disable the Rule (Use with Caution): If the application requires external process execution and other options are not feasible consider disabling the rule.
+

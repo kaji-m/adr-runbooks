@@ -1,3 +1,9 @@
+---
+layout: runbook
+title: "Expression Language Injection"
+description: "Guide for addressing server-side code injection vulnerabilities where attackers exploit expression language evaluation to compromise application data and functionality"
+---
+
 <!-- \ or two whitespaces used for line breaks -->
 # Expression Language Injection Runbook
 

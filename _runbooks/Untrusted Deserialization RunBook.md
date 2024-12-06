@@ -1,16 +1,22 @@
+---
+layout: runbook
+title: "Untrusted Deserialization"
+description: "Guide for handling attacks where attackers pass arbitrary objects or code to a deserializer, potentially enabling denial of service, authentication bypass, or remote code execution"
+---
+
 <!-- \ or two whitespaces used for line breaks -->
-# Path Traversal Runbook
+# Untrusted Deserialization Runbook
 
-Path traversal attacks use an affected application to gain unauthorized access to server file system folders that are higher in the directory hierarchy than the web root folder. A successful path traversal attack can fool a web application into reading and consequently exposing the contents of files outside of the document root directory of the application or the web server, including credentials for back-end systems, application code and data, and sensitive operating system files. If successful this can lead to unauthorized data access, data exfiltration, and remote code execution.
+Serialization refers to the process of converting an object into a format which can be saved to a file or a datastore. Deserialization reverses this process, transforming serialized data coming from a file, stream, or network socket into an object.Untrusted Deserialization is a web application vulnerability that enables attackers to pass arbitrary objects or code to a deserializer. In this kind of attack, untrusted data abuses the logic of an application to inflict a denial of service (DoS) attack, achieve authentication bypass, enable remote code execution, and even execute arbitrary code as it is being deserialized.
 
 
-Example Event - Exploited outcome Path Traversal  
-`Oct 04 12:33:38 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The parameter file had a value that successfully exploited path-traversal - ../../../etc/passwd|WARN|pri=path-traversal src=1.1.1.1 spt=8080 request=/file requestMethod=GET app=Web Application outcome=EXPLOITED`  
+Example Event - Exploited outcome Untrusted Deserialization  
+`Oct 18 12:36:11 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The input UNKNOWN had a value that successfully exploited untrusted-deserialization - java.net.URL|WARN|pri=untrusted-deserialization src=0:0:0:0:0:0:0:1 spt=8080 request=/deserialize requestMethod=GET app=webapplication outcome=EXPLOITED`  
+  
   
 
-Example Event - Probed (or Ineffective) outcome Path Traversal  
-`Oct 04 12:29:32 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The URI URI had a value that matched a signature for, but did not successfully exploit, path-traversal - /file=/etc/passwd|WARN|pri=path-traversal src=1.1.1.1 spt=8080 request=/file=/etc/passwd requestMethod=GET app=Web Application outcome=INEFFECTIVE` 
-  
+Example Event - Blocked outcome Untrusted Deserialization  
+`Oct 18 12:39:34 192.168.12.70 CEF:0|Contrast Security|Contrast Agent Java|6.9.0|SECURITY|The input UNKNOWN had a value that successfully exploited untrusted-deserialization - java.net.URL|WARN|pri=untrusted-deserialization src=0:0:0:0:0:0:0:1 spt=8080 request=/deserialize requestMethod=GET app=webapplication outcome=BLOCKED`
   
   
 
@@ -27,26 +33,23 @@ What is the “outcome” of the event you are triaging? (click to proceed)
 
 ## Exploited
 
-An "Exploited" outcome means Contrast detected an input resembling a Path Traversal attack that reached a vulnerable file operation, and then successfully manipulated that operation to access a file outside the intended directory.  
+"Exploited" means Contrast detected serialized input coming into the application and then confirmed it was subsequently deserialized and contained a known vulnerable gadget token, or an operating system command was executed as part of the deserialization process.  
 
 To verify this is a true positive, review the following attributes of the event for common indicators:  
 
-- Are there plain or encoded path traversal sequences present? (../, %2e%2e%2f)
-- Are suspicious files or paths being requested? (/etc/shadow, /etc/passwd, c:\windows\system32\, etc)
-- Are any known file security bypasses present in the file path? (::$DATA, ::$Index, (null byte))
-- Are unexpected files present in the filesystem?
-- Is the IP address from a pentester or known vulnerability scanner IP?
-- Are there application logs with file operation related error messages around the same timestamp as the event?
+- Did the application deserialize data from user controllable input?
+- Does the decoded payload look like a binary object?
+- Does the payload represent a Java serialized object? (It should start with 'rO0AB')
+- Does the payload represent a .NET serialized object? (It should start with 'AAEAAAD')
+- Are there application logs with serialization error messages around the same timestamp as the event?
 
 
 
 \
 Examples:
 
-- `../../../etc/passwd`
-- `%2e%2e%2fetc%2fpasswd`
-- `\../\../\etc/\password`
-- `..0x2f..0x2fetc0x2fpasswd`  
+- `.Net - AAEAAAD/////AQAAAAAAAAAMAgAAAF9TeXN0ZW0u[...]0KPC9PYmpzPgs=`
+- `Java - rO0ABXNyABFqYXZhL[...]D//////////3QACmdvb2GUuY29teA==`  
 
 \
 Does the event appear to be a true positive? (click to proceed)  
@@ -58,25 +61,22 @@ Does the event appear to be a true positive? (click to proceed)
 
 ## Blocked
 
-"Blocked" means Contrast detected an input resembling a Path Traversal attack that reached a vulnerable file operation, and therefore blocked the application from performing the operation  
+"Blocked" means Contrast detected serialized input coming into the application and then confirmed it was being deserialized with a known vulnerable gadget token and therefore blocked the execution of it.  
 
 To verify this is a true positive, review the following attributes of the event:
 
-- Are there plain or encoded path traversal sequences present? (../, %2e%2e%2f)
-- Are suspicious files or paths being requested? (/etc/shadow, /etc/passwd, c:\windows\system32\, etc)
-- Are any known file security bypasses present in the file path? (::$DATA, ::$Index, (null byte))
-- Are unexpected files present in the filesystem?
-- Is the IP address from a pentester or known vulnerability scanner IP?
-- Are there application logs with file operation related error messages around the same timestamp as the event?
+- Did the application deserialize data from user controllable input?
+- Does the decoded payload look like a binary object?
+- Does the payload represent a Java serialized object? (It should start with 'rO0AB')
+- Does the payload represent a .NET serialized object? (It should start with 'AAEAAAD')
+- Are there application logs with serialization error messages around the same timestamp as the event?
 
 
 \
 Examples:
 
-- `../../../etc/passwd`
-- `%2e%2e%2fetc%2fpasswd`
-- `\../\../\etc/\password`
-- `..0x2f..0x2fetc0x2fpasswd`  
+- `.Net - AAEAAAD/////AQAAAAAAAAAMAgAAAF9TeXN0ZW0u[...]0KPC9PYmpzPgs=`
+- `Java - rO0ABXNyABFqYXZhL[...]D//////////3QACmdvb2GUuY29teA==`  
 
 
 \
@@ -92,7 +92,7 @@ Is the event a true positive? (click to proceed)
 
 ## Ineffective
 
-"Ineffective" means Contrast detected an input coming into an application that looked like Path Traversal, but did not confirm that the input was used in a file operation. This is called a “Probe” within the Contrast UI. This event is a real attack attempt to exploit your application, but it was ineffective. Probes can indicate an attacker scanning or exploring for vulnerabilities.
+"Ineffective" means that Contrast detected an input resembling a serialized string but did not confirm it was deserialized unsafely. This is called a “Probe” within the Contrast UI. This event is an unsuccessful attempt at an exploit. They can indicate an attack fuzzing and looking for vulnerabilities.
 
 - Does the probe event appear to be caused by legitimate traffic and numerous similar probe events are being generated, an [exclusion](https://docs.contrastsecurity.com/en/application-exclusions.html) can be configured to clean up Contrast data.  
 - Is the probe originating from a specific ip[s] that is a real external IP address (not internal load balancer or network device) and not the public IP address for a large company network?   Consider…  

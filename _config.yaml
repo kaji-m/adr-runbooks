@@ -1,39 +1,50 @@
-# _config.yml
-title: Contrast Security ADR Runbooks
-description: Security runbooks for Contrast Security's Attack Detection Rules
+title: Application Detection and Response Runbooks
+description: Security incident response runbooks for Contrast Security's Application Detection and Response
 baseurl: "/adr-runbooks"
 url: "https://contrast-security-oss.github.io"
-repository: Contrast-Security-OSS/adr-runbooks
 
-# Theme and markdown settings
-theme: minima
+# Build settings
 markdown: kramdown
-kramdown:
-  input: GFM
-  hard_wrap: true
-  syntax_highlighter: rouge
-  parse_block_html: true
-  auto_ids: true
-  toc_levels: 1..3
+remote_theme: pages-themes/minimal@v0.2.0
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
 
 # Collections
 collections:
   runbooks:
     output: true
-    permalink: /runbooks/:title/
+    permalink: /:collection/:name/
 
-# Default front matter
+# Default front matter for runbook files
 defaults:
   - scope:
       path: ""
-      type: runbooks
+      type: "runbooks"
     values:
-      layout: runbook
+      layout: "runbook"
+  - scope:
+      path: ""
+    values:
+      layout: "default"
 
-# Files to exclude
-exclude:
-  - README.md
-  - Gemfile
-  - Gemfile.lock
-  - vendor
-  - .git/
+# Navigation
+nav_links:
+  - title: Home
+    url: /
+  - title: Runbooks
+    url: /runbooks/
+  - title: About
+    url: /about/
+
+# Theme customization
+colors:
+  deep_green: "#004D45"
+  medium_green: "#0E9E53"
+  midnight_blue: "#0A004F"
+  red: "#FF6862"
+  purple: "#804CF5"
+  blue: "#3877FF"
+  bright_green: "#40D273"
+  light_blue: "#00CFFE"
+  platinum_grey: "#9DA5B3"
