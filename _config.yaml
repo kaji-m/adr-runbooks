@@ -1,3 +1,12 @@
 title: Contrast Security ADR Runbooks
+description: Security runbooks for Contrast Security's Attack Detection Rules
 baseurl: "/adr-runbooks"
 url: "https://contrast-security-oss.github.io"
+
+collections:
+  runbooks:
+    output: true
+    permalink: /:collection/:title
+
+exclude:
+  - README.md
