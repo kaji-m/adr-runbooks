@@ -1,94 +1,198 @@
-// Add anchor links to headings
-document.addEventListener('DOMContentLoaded', function () {
-  const articleContent = document.querySelector('.runbook-content');
-  if (!articleContent) return;
+// Runbook functionality
+class RunbookManager {
+  constructor() {
+    this.initializeVariables();
+    this.setupEventListeners();
+    this.handleInitialState();
+  }
 
-  const headings = articleContent.querySelectorAll('h2, h3, h4, h5, h6');
+  initializeVariables() {
+    // Navigation elements
+    this.navToggle = document.querySelector('.nav-toggle');
+    this.navLinks = document.querySelector('.nav-links');
 
-  headings.forEach(heading => {
-    // Skip headings that shouldn't have anchors
-    if (heading.classList.contains('no-anchor')) return;
+    // Table of contents
+    this.toc = document.querySelector('.runbook-toc');
+    this.tocLinks = document.querySelectorAll('.toc-list a');
 
-    // Create anchor link
-    const anchor = document.createElement('a');
-    anchor.className = 'heading-anchor';
-    anchor.href = `#${heading.id}`;
-    anchor.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-      '<path d="M7.5 4H4.5C3.67157 4 3 4.67157 3 5.5V10.5C3 11.3284 3.67157 12 4.5 12H7.5M8.5 12H11.5C12.3284 12 13 11.3284 13 10.5V5.5C13 4.67157 12.3284 4 11.5 4H8.5" ' +
-      'stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
-      '<path d="M6 8H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
-      '</svg>';
+    // Content sections
+    this.sections = document.querySelectorAll('h2[id], h3[id]');
 
-    // Add anchor link after heading text
-    heading.appendChild(anchor);
+    // Current section tracking
+    this.currentSection = null;
+    this.tocObserver = null;
+  }
 
-    // Add hover behavior
-    heading.addEventListener('mouseenter', () => {
-      anchor.style.opacity = '1';
+  setupEventListeners() {
+    // Mobile navigation
+    if (this.navToggle) {
+      this.navToggle.addEventListener('click', () => this.toggleNavigation());
+    }
+
+    // Table of contents navigation
+    this.tocLinks.forEach(link => {
+      link.addEventListener('click', (e) => this.handleTocClick(e));
     });
 
-    heading.addEventListener('mouseleave', () => {
-      anchor.style.opacity = '0';
+    // Scroll spy
+    this.setupScrollSpy();
+
+    // Handle initial hash
+    if (window.location.hash) {
+      this.scrollToSection(window.location.hash);
+    }
+  }
+
+  handleInitialState() {
+    // Set initial active section
+    this.updateActiveSection();
+
+    // Handle mobile nav initial state
+    this.handleMobileNavState();
+  }
+
+  toggleNavigation() {
+    const isExpanded = this.navToggle.getAttribute('aria-expanded') === 'true';
+    this.navToggle.setAttribute('aria-expanded', !isExpanded);
+    this.navLinks.classList.toggle('active');
+  }
+
+  handleTocClick(e) {
+    e.preventDefault();
+    const targetId = e.target.getAttribute('href');
+    this.scrollToSection(targetId);
+    history.pushState(null, null, targetId);
+  }
+
+  scrollToSection(targetId) {
+    const targetElement = document.querySelector(targetId);
+    if (!targetElement) return;
+
+    const headerOffset = 80; // Adjust based on fixed header height
+    const elementPosition = targetElement.getBoundingClientRect().top;
+    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: 'smooth'
     });
+
+    // Highlight the section temporarily
+    targetElement.classList.add('highlight');
+    setTimeout(() => {
+      targetElement.classList.remove('highlight');
+    }, 1500);
+  }
+
+  setupScrollSpy() {
+    const options = {
+      root: null,
+      rootMargin: '-100px 0px -66%',
+      threshold: 0
+    };
+
+    this.tocObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          this.updateActiveTocLink(entry.target);
+        }
+      });
+    }, options);
+
+    this.sections.forEach(section => {
+      this.tocObserver.observe(section);
+    });
+  }
+
+  updateActiveTocLink(section) {
+    this.tocLinks.forEach(link => {
+      link.classList.remove('active');
+      if (link.getAttribute('href') === `#${section.id}`) {
+        link.classList.add('active');
+      }
+    });
+  }
+
+  updateActiveSection() {
+    const scrollPosition = window.scrollY;
+
+    for (const section of this.sections) {
+      const sectionTop = section.offsetTop - 100;
+      const sectionBottom = sectionTop + section.offsetHeight;
+
+      if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+        if (this.currentSection !== section.id) {
+          this.currentSection = section.id;
+          this.updateActiveTocLink(section);
+        }
+        break;
+      }
+    }
+  }
+
+  handleMobileNavState() {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+
+    const handleMobileChange = (e) => {
+      if (!e.matches) {
+        // Reset mobile nav when returning to desktop
+        this.navLinks.classList.remove('active');
+        this.navToggle.setAttribute('aria-expanded', 'false');
+      }
+    };
+
+    mediaQuery.addListener(handleMobileChange);
+  }
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  new RunbookManager();
+});
+
+// Add copy functionality to code blocks
+document.querySelectorAll('pre code').forEach((block) => {
+  const copyButton = document.createElement('button');
+  copyButton.className = 'copy-button';
+  copyButton.textContent = 'Copy';
+
+  block.parentNode.style.position = 'relative';
+  block.parentNode.appendChild(copyButton);
+
+  copyButton.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(block.textContent);
+      copyButton.textContent = 'Copied!';
+      copyButton.classList.add('copied');
+
+      setTimeout(() => {
+        copyButton.textContent = 'Copy';
+        copyButton.classList.remove('copied');
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+      copyButton.textContent = 'Failed to copy';
+      copyButton.classList.add('error');
+
+      setTimeout(() => {
+        copyButton.textContent = 'Copy';
+        copyButton.classList.remove('error');
+      }, 2000);
+    }
   });
+});
 
-  // Handle anchor clicks
-  document.querySelectorAll('.heading-anchor').forEach(anchor => {
-    anchor.addEventListener('click', (e) => {
-      e.preventDefault();
-      const targetId = anchor.getAttribute('href').slice(1);
-      const targetElement = document.getElementById(targetId);
-
-      if (targetElement) {
-        // Add URL fragment without scrolling
-        history.pushState(null, null, `#${targetId}`);
-
-        // Smooth scroll to element
+// Add support for deep linking
+window.addEventListener('hashchange', () => {
+  if (window.location.hash) {
+    const targetElement = document.querySelector(window.location.hash);
+    if (targetElement) {
+      setTimeout(() => {
         targetElement.scrollIntoView({
           behavior: 'smooth',
           block: 'start'
         });
-
-        // Visual feedback
-        targetElement.classList.add('highlight');
-        setTimeout(() => {
-          targetElement.classList.remove('highlight');
-        }, 1500);
-      }
-    });
-  });
+      }, 0);
+    }
+  }
 });
-
-// Add CSS for anchor links
-const style = document.createElement('style');
-style.textContent = `
-    .heading-anchor {
-      opacity: 0;
-      margin-left: 0.5rem;
-      color: var(--platinum-grey);
-      transition: opacity 0.2s ease-in-out;
-    }
-  
-    .heading-anchor:hover {
-      color: var(--blue);
-    }
-  
-    h2:hover .heading-anchor,
-    h3:hover .heading-anchor,
-    h4:hover .heading-anchor,
-    h5:hover .heading-anchor,
-    h6:hover .heading-anchor {
-      opacity: 1;
-    }
-  
-    .highlight {
-      animation: highlight 1.5s ease-out;
-    }
-  
-    @keyframes highlight {
-      0% { background-color: rgba(56, 119, 255, 0.2); }
-      100% { background-color: transparent; }
-    }
-  `;
-
-document.head.appendChild(style);

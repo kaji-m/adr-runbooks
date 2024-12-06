@@ -1,14 +1,26 @@
+# Site settings
 title: Application Detection and Response Runbooks
-description: Security incident response runbooks for Contrast Security's Application Detection and Response
+description: >-
+  Comprehensive security incident response runbooks for Contrast Security's 
+  Application Detection and Response platform, providing step-by-step guidance 
+  for security teams.
 baseurl: "/adr-runbooks"
 url: "https://contrast-security-oss.github.io"
+lang: en
+author: Contrast Security
+logo: /assets/images/contrast-logo.svg
 
 # Build settings
 markdown: kramdown
 remote_theme: pages-themes/minimal@v0.2.0
+sass:
+  style: compressed
+
 plugins:
   - jekyll-remote-theme
   - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-last-modified-at
 
 # Collections
 collections:
@@ -16,28 +28,33 @@ collections:
     output: true
     permalink: /:collection/:name/
 
-# Default front matter for runbook files
+# Default front matter
 defaults:
   - scope:
       path: ""
       type: "runbooks"
     values:
       layout: "runbook"
+      schema: SecurityRunbook
   - scope:
       path: ""
     values:
       layout: "default"
+      image: /assets/images/contrast-logo.png
 
 # Navigation
 nav_links:
   - title: Home
     url: /
+    description: Return to homepage
   - title: Runbooks
     url: /runbooks/
+    description: Browse all security runbooks
   - title: About
     url: /about/
+    description: Learn about this project
 
-# Theme customization
+# Theme colors
 colors:
   deep_green: "#004D45"
   medium_green: "#0E9E53"
@@ -48,3 +65,40 @@ colors:
   bright_green: "#40D273"
   light_blue: "#00CFFE"
   platinum_grey: "#9DA5B3"
+
+# Social/SEO
+twitter:
+  username: ContrastSec
+  card: summary
+social:
+  name: Contrast Security
+  links:
+    - https://twitter.com/ContrastSec
+    - https://github.com/Contrast-Security-OSS
+    - https://www.linkedin.com/company/contrast-security
+
+# Analytics
+google_analytics: # TODO: Add your GA tracking ID
+
+# Additional settings
+timezone: UTC
+encoding: utf-8
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - CONTRIBUTING.md
+  - README.md
+  - LICENSE
+  - CNAME
+  - package.json
+  - package-lock.json
+
+# Performance
+compress_html:
+  clippings: all
+  comments: all
+  endings: all
+  blanklines: false
+  profile: false

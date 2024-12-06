@@ -1,32 +1,69 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page.title }}</title>
-    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
-    <link rel="stylesheet" href="{{ '/assets/css/index.css' | relative_url }}">
-</head>
-<body>
-    <div class="hero">
-        <div class="container">
-            <h1>{{ page.title }}</h1>
-            <p class="hero-description">{{ page.description }}</p>
-            <a href="https://github.com/Contrast-Security-OSS/adr-runbooks" class="github-button">
-                View the Project on GitHub
+---
+layout: default
+---
+
+<header class="hero" role="banner">
+    <div class="container">
+        <h1>{{ page.title }}</h1>
+        {% if page.description %}
+        <p class="hero-description">{{ page.description }}</p>
+        {% endif %}
+        <div class="hero-actions">
+            <a href="{{ site.github.repository_url }}" class="button button-primary">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="none" d="M0 0h24v24H0z" />
+                    <path
+                        d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.84 9.49.5.09.68-.22.68-.48v-1.71c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02.8-.22 1.65-.33 2.5-.33.85 0 1.7.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48C19.14 20.17 22 16.42 22 12c0-5.523-4.477-10-10-10z"
+                        fill="currentColor" />
+                </svg>
+                View on GitHub
             </a>
         </div>
     </div>
+</header>
 
-    <main class="container">
+<main class="container" role="main">
+    <div class="runbooks-grid">
+        {% for category in site.data.categories %}
+        <section class="runbook-category">
+            <h2>{{ category.name }}</h2>
+            {% if category.description %}
+            <p class="category-description">{{ category.description }}</p>
+            {% endif %}
+
+            <div class="runbook-list">
+                {% assign category_runbooks = site.runbooks | where: "category", category.id %}
+                {% for runbook in category_runbooks %}
+                <article class="runbook-card">
+                    <h3 class="runbook-title">
+                        <a href="{{ runbook.url | relative_url }}">{{ runbook.title }}</a>
+                    </h3>
+                    {% if runbook.description %}
+                    <p class="runbook-description">{{ runbook.description }}</p>
+                    {% endif %}
+                    <div class="runbook-meta">
+                        <span class="runbook-date">
+                            Last updated: {{ runbook.last_modified_at | default: runbook.date | date: "%B %d, %Y" }}
+                        </span>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+    </div>
+
+    <section class="content-section">
         {{ content }}
-    </main>
+    </section>
+</main>
 
-    <footer>
-        <div class="container">
-            <p>© {{ site.time | date: '%Y' }} Contrast Security. All rights reserved.</p>
-            <p>For more information, visit <a href="https://www.contrastsecurity.com">contrastsecurity.com</a></p>
-        </div>
-    </footer>
-</body>
-</html>
+<aside class="contribution-cta">
+    <div class="container">
+        <h2>Contributing</h2>
+        <p>Help improve these runbooks by contributing your expertise.</p>
+        <a href="{{ site.github.repository_url }}/blob/main/CONTRIBUTING.md" class="button button-secondary">
+            Learn how to contribute
+        </a>
+    </div>
+</aside>
