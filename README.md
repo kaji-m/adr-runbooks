@@ -1,8 +1,3 @@
----
-layout: default
-title: Application Detection and Response Runbooks
----
-
 # Application Detection and Response Runbooks
 
 This repository contains detailed runbooks for responding to various security incidents detected by Contrast Security. These runbooks provide step-by-step guidance for security teams to effectively triage and respond to different types of security events.
