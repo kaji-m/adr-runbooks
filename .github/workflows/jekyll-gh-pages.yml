@@ -27,96 +27,74 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: Setup Jekyll
-        run: |
-          gem install bundler
-          bundle install
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
       - name: Create Jekyll structure
         run: |
-          # Create necessary directories
-          mkdir -p _runbooks _layouts _includes assets/css
-
-          # Create runbook layout
-          cat > _layouts/runbook.html << 'EOL'
-          ---
-          layout: default
-          ---
-          <article class="runbook">
-            <header class="runbook-header">
-              <h1>{{ page.title }}</h1>
-            </header>
-            
-            <div class="runbook-content">
-              {{ content }}
-            </div>
-            
-            <footer class="runbook-footer">
-              <hr>
-              <p>
-                <a href="{{ site.github.repository_url }}/edit/main/{{ page.path }}">Edit this page on GitHub</a>
-              </p>
-            </footer>
-          </article>
-          EOL
-
-          # Process runbook files
+          mkdir -p _runbooks _layouts _includes
+          
+          # Create layout file
+          echo '---' > _layouts/runbook.html
+          echo 'layout: default' >> _layouts/runbook.html
+          echo '---' >> _layouts/runbook.html
+          echo '<article class="runbook">' >> _layouts/runbook.html
+          echo '  <h1>{{ page.title }}</h1>' >> _layouts/runbook.html
+          echo '  {{ content }}' >> _layouts/runbook.html
+          echo '  <footer><a href="{{ site.github.repository_url }}/edit/main/{{ page.path }}">Edit this page</a></footer>' >> _layouts/runbook.html
+          echo '</article>' >> _layouts/runbook.html
+          
+          # Process runbooks
           for file in runbooks/*.md; do
             if [ -f "$file" ] && [ "$(basename "$file")" != "README.md" ]; then
-              # Get clean title and filename
-              title=$(basename "$file" .md | sed 's/RunBook//' | sed 's/-/ /g')
-              newname=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/runbook\.md$/md/' | sed 's/[)(]//g')
+              filename=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/runbook\.md$/md/' | sed 's/[)(]//g')
+              title=$(basename "$file" .md | sed 's/RunBook//')
               
-              # Create new file with front matter
-              cat > "_runbooks/$newname" << EOL
----
-layout: runbook
-title: "${title}"
-permalink: /runbooks/${newname%.*}/
----
-EOL
+              # Create new runbook file with front matter
+              echo "---" > "_runbooks/$filename"
+              echo "layout: runbook" >> "_runbooks/$filename"
+              echo "title: \"$title\"" >> "_runbooks/$filename"
+              echo "permalink: /runbooks/${filename%.*}/" >> "_runbooks/$filename"
+              echo "---" >> "_runbooks/$filename"
               
-              # Append original content, skipping any existing front matter
+              # Append content, skipping any existing front matter
               if grep -q "^---" "$file"; then
-                sed -e '1{/^---$/!q;};1,/^---$/d' "$file" >> "_runbooks/$newname"
+                sed -e '1{/^---$/!q;};1,/^---$/d' "$file" >> "_runbooks/$filename"
               else
-                cat "$file" >> "_runbooks/$newname"
+                cat "$file" >> "_runbooks/$filename"
               fi
             fi
           done
-
+          
           # Create index page
-          cat > index.md << 'EOL'
-          ---
-          layout: default
-          title: Contrast Security Attack Detection Rules Runbooks
-          ---
+          echo "---" > index.md
+          echo "layout: default" >> index.md
+          echo "title: Contrast Security ADR Runbooks" >> index.md
+          echo "---" >> index.md
+          echo "" >> index.md
+          echo "# Attack Detection Rules (ADR) Runbooks" >> index.md
+          echo "" >> index.md
+          echo "Welcome to Contrast Security's Attack Detection Rules (ADR) Runbooks. These guides provide detailed procedures for understanding and responding to various security vulnerabilities detected by Contrast Security." >> index.md
+          echo "" >> index.md
+          echo "## Available Runbooks" >> index.md
+          echo "" >> index.md
+          echo "{% assign sorted_runbooks = site.runbooks | sort: 'title' %}" >> index.md
+          echo "{% for runbook in sorted_runbooks %}" >> index.md
+          echo "* [{{ runbook.title }}]({{ runbook.url | relative_url }})" >> index.md
+          echo "{% endfor %}" >> index.md
 
-          # Attack Detection Rules (ADR) Runbooks
-
-          Welcome to Contrast Security's Attack Detection Rules (ADR) Runbooks. These guides provide detailed procedures for understanding and responding to various security vulnerabilities detected by Contrast Security.
-
-          ## Available Runbooks
-
-          {% assign sorted_runbooks = site.runbooks | sort: "title" %}
-          {% for runbook in sorted_runbooks %}
-          * [{{ runbook.title }}]({{ runbook.url | relative_url }})
-          {% endfor %}
-
-          ## Contributing
-
-          These runbooks are open source. To contribute:
-
-          1. Fork the [repository](https://github.com/Contrast-Security-OSS/adr-runbooks)
-          2. Make your changes
-          3. Submit a pull request
-          EOL
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+      - name: Setup Dependencies
+        run: |
+          echo "source 'https://rubygems.org'" > Gemfile
+          echo "gem 'jekyll', '~> 4.2.0'" >> Gemfile
+          echo "gem 'minima'" >> Gemfile
+          echo "gem 'webrick'" >> Gemfile
+          bundle install
 
       - name: Build with Jekyll
         run: bundle exec jekyll build
+        env:
+          JEKYLL_ENV: production
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
