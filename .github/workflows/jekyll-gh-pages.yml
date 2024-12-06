@@ -1,25 +1,20 @@
-name: Deploy Runbooks to GitHub Pages
+name: Deploy Security Runbooks to GitHub Pages
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Build job
   build:
     runs-on: ubuntu-latest
     steps:
@@ -35,7 +30,7 @@ jobs:
       - name: Create Jekyll structure
         run: |
           # Create necessary directories
-          mkdir -p _layouts _runbooks
+          mkdir -p _runbooks _layouts _includes assets/css
 
           # Create runbook layout
           cat > _layouts/runbook.html << 'EOL'
@@ -43,41 +38,98 @@ jobs:
           layout: default
           ---
           <article class="runbook">
-            <header class="runbook-header">
+            <header class="page-header">
               <h1>{{ page.title }}</h1>
-              {% if page.description %}
-              <p class="runbook-description">{{ page.description }}</p>
-              {% endif %}
             </header>
+            
             <div class="runbook-content">
               {{ content }}
             </div>
-            <footer class="runbook-footer">
-              <p><a href="{{ site.github.repository_url }}/edit/main/{{ page.path }}">Edit this page on GitHub</a></p>
+            
+            <footer class="page-footer">
+              <hr>
+              <p class="text-small">
+                <a href="{{ site.github.repository_url }}/edit/main/{{ page.path }}">Edit this page on GitHub</a>
+              </p>
             </footer>
           </article>
           EOL
 
-          # Move and rename runbooks
-          for file in runbooks/*.md; do
-            if [ -f "$file" ]; then
-              # Convert filename to lowercase, replace spaces with hyphens
-              newname=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/runbook\.md$/md/')
+          # Add custom styles
+          cat > assets/css/style.scss << 'EOL'
+          ---
+          ---
+          
+          @import "{{ site.theme }}";
+          
+          .runbook {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          
+          .runbook h1 {
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+          }
+          
+          .runbook pre {
+            background-color: #f6f8fa;
+            border-radius: 3px;
+            padding: 16px;
+          }
+          EOL
+
+          # Process runbook files
+          for file in *.md runbooks/*.md; do
+            if [ -f "$file" ] && [ "$(basename "$file")" != "README.md" ]; then
+              # Convert filename to lowercase and clean it
+              newname=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/runbook\.md$/md/' | sed 's/[)(]//g')
+              
               # Add front matter if it doesn't exist
               if ! grep -q "^---" "$file"; then
-                title=$(basename "$file" .md | sed 's/-/ /g' | sed 's/\b\(.\)/\u\1/g')
+                title=$(basename "$file" .md | sed 's/RunBook//' | sed 's/-/ /g' | sed 's/\b\(.\)/\u\1/g')
                 temp_file=$(mktemp)
                 echo "---" > "$temp_file"
                 echo "layout: runbook" >> "$temp_file"
                 echo "title: \"$title\"" >> "$temp_file"
+                echo "nav_order: 2" >> "$temp_file"
                 echo "---" >> "$temp_file"
                 cat "$file" >> "$temp_file"
                 mv "$temp_file" "_runbooks/$newname"
               else
-                mv "$file" "_runbooks/$newname"
+                cp "$file" "_runbooks/$newname"
               fi
             fi
           done
+
+          # Create index page
+          cat > index.md << 'EOL'
+          ---
+          layout: default
+          title: Contrast Security Attack Detection Rules Runbooks
+          nav_order: 1
+          ---
+
+          # Attack Detection Rules (ADR) Runbooks
+
+          Welcome to Contrast Security's Attack Detection Rules (ADR) Runbooks. These guides provide detailed procedures for understanding and responding to various security vulnerabilities detected by Contrast Security.
+
+          ## Available Runbooks
+
+          {% assign sorted_runbooks = site.runbooks | sort: "title" %}
+          {% for runbook in sorted_runbooks %}
+          * [{{ runbook.title }}]({{ runbook.url | relative_url }})
+          {% endfor %}
+
+          ## Contributing
+
+          These runbooks are open source. To contribute:
+
+          1. Fork the [repository](https://github.com/Contrast-Security-OSS/adr-runbooks)
+          2. Make your changes
+          3. Submit a pull request
+          EOL
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -91,7 +143,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 
-  # Deployment job
   deploy:
     environment:
       name: github-pages
