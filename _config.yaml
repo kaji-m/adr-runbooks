@@ -1,20 +1,28 @@
+# _config.yml
 title: Contrast Security ADR Runbooks
 description: Security runbooks for Contrast Security's Attack Detection Rules
 baseurl: "/adr-runbooks"
 url: "https://contrast-security-oss.github.io"
 repository: Contrast-Security-OSS/adr-runbooks
 
+# Theme and markdown settings
 theme: minima
 markdown: kramdown
 kramdown:
   input: GFM
-  hard_wrap: false
+  hard_wrap: true
+  syntax_highlighter: rouge
+  parse_block_html: true
+  auto_ids: true
+  toc_levels: 1..3
 
+# Collections
 collections:
   runbooks:
     output: true
     permalink: /runbooks/:title/
 
+# Default front matter
 defaults:
   - scope:
       path: ""
@@ -22,10 +30,10 @@ defaults:
     values:
       layout: runbook
 
+# Files to exclude
 exclude:
   - README.md
   - Gemfile
   - Gemfile.lock
-  - node_modules
   - vendor
   - .git/
