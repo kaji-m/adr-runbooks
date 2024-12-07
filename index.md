@@ -32,7 +32,3 @@ This repository contains detailed runbooks for responding to various security in
 3. Follow the decision tree to classify the event
 4. Execute the recommended response procedures
 5. Document actions taken and complete post-incident activities
-
-## Contributing
-
-See our [Contribution Guidelines](CONTRIBUTING.md) for information on how to contribute to these runbooks.
