@@ -47,12 +47,12 @@ nav_links:
   - title: Home
     url: /
     description: Return to homepage
-  - title: Runbooks
-    url: /runbooks/
-    description: Browse all security runbooks
-  - title: About
-    url: /about/
-    description: Learn about this project
+  # - title: Runbooks
+  #   url: /runbooks/
+  #   description: Browse all security runbooks
+  # - title: About
+  #   url: /about/
+  #   description: Learn about this project
 
 # Theme colors
 colors:

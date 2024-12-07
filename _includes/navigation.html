@@ -1,0 +1,23 @@
+<nav class="nav-wrapper" role="navigation" aria-label="Main navigation">
+    <div class="container">
+        <div class="nav-brand">
+            <a href="{{ '/' | relative_url }}" aria-label="Return to homepage">
+                <img src="{{ '/assets/images/contrast-logo.svg' | relative_url }}" alt="{{ site.title }}"
+                    class="nav-logo" width="150" height="40">
+            </a>
+        </div>
+
+        <button class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+            <span class="nav-toggle-icon"></span>
+        </button>
+
+        <div class="nav-links">
+            {% for link in site.nav_links %}
+            <a href="{{ link.url | relative_url }}" {% if page.url==link.url %}aria-current="page" class="active" {%
+                endif %} title="{{ link.description }}">
+                {{ link.title }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</nav>

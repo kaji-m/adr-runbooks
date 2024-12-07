@@ -10,20 +10,8 @@
 </head>
 
 <body>
-    <div class="nav-wrapper">
-        <nav class="nav">
-            <div class="nav-brand">
-                <img src="{{ '/assets/images/contrast-logo.svg' | relative_url }}" alt="Contrast Security"
-                    class="nav-logo">
-            </div>
-            <div class="nav-links">
-                {% for link in site.nav_links %}
-                <a href="{{ link.url | relative_url }}" {% if page.url==link.url %}class="active" {% endif %}>{{
-                    link.title }}</a>
-                {% endfor %}
-            </div>
-        </nav>
-    </div>
+    <!-- Navigation -->
+    {% include navigation.html %}
 
     <div class="container">
         <div class="sidebar">
